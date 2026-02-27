@@ -11,17 +11,17 @@ local config = {
 
 -- c stack overflow prevention since we hook fucking everything
 local appendf,tostr,getinfo=appendfile,tostring,debug.getinfo
-local hookfunc,ismultihook,rawmeta,newcc=clonefunction(hookfunction),clonefunction(isfunctionhooked),clonefunction(getrawmetatable),clonefunction(newcclosure)
-local checkcall,getncm,rget,nxt,typ,typeb=clonefunction(checkcaller),clonefunction(getnamecallmethod),rawget,next,typeof,type
+local hookfunc,ismultihook,newcc=clonefunction(hookfunction),clonefunction(isfunctionhooked),clonefunction(newcclosure)
+local checkcall,getncm,rget,nxt=clonefunction(checkcaller),clonefunction(getnamecallmethod),rawget,next
 local getrenv_c,getgenv_c=getrenv,getgenv
 local blocklist={}
 if config.AntiOverflow then
     local bl = {
-        appendfile, writefile, hookfunction, isfunctionhooked, getrawmetatable, newcclosure,
+        appendfile, writefile, hookfunction, isfunctionhooked, newcclosure,
         checkcaller, getnamecallmethod, clonefunction, debug.getinfo,
-        appendf, hookfunc, ismultihook, rawmeta, newcc,
+        appendf, hookfunc, ismultihook, newcc,
         checkcall, getncm, getinfo,
-        tostring, tostr, next, nxt, rawget, rget, type, typeb, typeof, typ
+        tostring, tostr, next, nxt, rawget, rget
     }
     for _,fn in nxt, bl do
         if type(fn) == "function" then blocklist[fn] = true end
@@ -29,9 +29,9 @@ if config.AntiOverflow then
 end
 
 local function Initialize()
-    charset, base = "012345678910", "demongod"
+    charset, base = "012345678910", "Nitrous"
     for i = 1, 10 do
-        base = base .. charset,  math.random(#charset),  math.random(#charset)
+        base = base .. string.sub(charset,  math.random(#charset),  math.random(#charset))
     end
     filename = base .. ".txt"
     writefile(filename, "")
@@ -68,7 +68,7 @@ Initialize()
 local function Metamethods()
     if FindDumpMethod() ~= "metamethods" and FindDumpMethod() ~= "all" then return end
 
-    local mt = rawmeta(game)
+    local mt = getrawmetatable(game)
     setreadonly(mt, false)
 
     local hook;hook = hookfunc(mt.__namecall, newcc(function(...)
@@ -112,12 +112,12 @@ end
 local function RobloxFunctions()
     if FindDumpMethod() ~= "robloxfunctions" and FindDumpMethod() ~= "all" then return end
 
-    local rf = rawmeta(getrenv_c())
-    if rf.__index and typeb(rf.__index) == "table" then
+    local rf = getrawmetatable(getrenv_c())
+    if rf.__index and typeof(rf.__index) == "table" then
         for i,v in nxt, rf.__index do
-            if typ(v) == "table" then
+            if typeof(v) == "table" then
                 for a,b in nxt, v do
-                    if typ(b) == "function" and not blocklist[b] and not PreventMultiHook(b) then
+                    if typeof(b) == "function" and not blocklist[b] and not PreventMultiHook(b) then
                         local orig;orig = hookfunc(b, function(...)
                             if checkcall() then
                                 local args = {...}
@@ -129,7 +129,7 @@ local function RobloxFunctions()
                         end)
                     end
                 end
-            elseif typ(v) == "function" and not blocklist[v] and not PreventMultiHook(v) then
+            elseif typeof(v) == "function" and not blocklist[v] and not PreventMultiHook(v) then
                 local orig;orig = hookfunc(v, function(...)
                     if checkcall() then
                         local args = {...}
@@ -149,7 +149,7 @@ local function ExecutorFunctions()
     if FindDumpMethod() ~= "execfunctions" and FindDumpMethod() ~= "all" then return end
 
     for i,v in nxt, getgenv_c() do
-        if typ(v) == "function" and not blocklist[v] and not PreventMultiHook(v) then
+        if typeof(v) == "function" and not blocklist[v] and not PreventMultiHook(v) then
             local orig;orig = hookfunc(v, function(...)
                 local args = {...}
                 for _,arg in nxt, args do
@@ -173,3 +173,4 @@ RobloxFunctions()
 -- todo: getgc dumping? getreg dumping? (threads and signals), opcode hooking? metatable based dumpers?
 -- todo: return names of any robloxfunc/executorfunc that returns a function (maybe upvalues,constants as well)
 -- checkcaller, tostring, getinfo
+-- make renamed funcs less ugly
