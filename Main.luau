@@ -10,20 +10,19 @@ local config = {
 }
 
 -- c stack overflow prevention since we hook fucking everything
-local appendf,tostr,getinfo=appendfile,tostring,debug.getinfo
-local hookfunc,ismultihook,newcc=clonefunction(hookfunction),clonefunction(isfunctionhooked),clonefunction(newcclosure)
-local checkcall,getncm,rget,nxt=clonefunction(checkcaller),clonefunction(getnamecallmethod),rawget,next
-local getrenv_c,getgenv_c=getrenv,getgenv
+local Appendfile,Tostring,getinfo=appendfile,tostring,debug.getinfo
+local Hookfunction,Isfunctionhooked,Newcclosure=clonefunction(hookfunction),clonefunction(isfunctionhooked),clonefunction(newcclosure)
+local Checkcaller,Getnamecallmethod,Rawget,Next=clonefunction(checkcaller),clonefunction(getnamecallmethod),rawget,next
 local blocklist={}
 if config.AntiOverflow then
     local bl = {
         appendfile, writefile, hookfunction, isfunctionhooked, newcclosure,
         checkcaller, getnamecallmethod, clonefunction, debug.getinfo,
-        appendf, hookfunc, ismultihook, newcc,
-        checkcall, getncm, getinfo,
-        tostring, tostr, next, nxt, rawget, rget
+        Appendfile, Hookfunction, Isfunctionhooked, Newcclosure,
+        Checkcaller, Getnamecallmethod, getinfo,
+        tostring, Tostring, next, Next, rawget, Rawget
     }
-    for _,fn in nxt, bl do
+    for _,fn in Next, bl do
         if type(fn) == "function" then blocklist[fn] = true end
     end
 end
@@ -57,7 +56,7 @@ end
 
 local function PreventMultiHook(f)
     if not config.NoMultiHook then return false end
-    if ismultihook(f) then return true end
+    if Isfunctionhooked(f) then return true end
     return false
 end
 
@@ -71,36 +70,36 @@ local function Metamethods()
     local mt = getrawmetatable(game)
     setreadonly(mt, false)
 
-    local hook;hook = hookfunc(mt.__namecall, newcc(function(...)
+    local hook;hook = Hookfunction(mt.__namecall, Newcclosure(function(...)
         local args = {select(2, ...)}
-        local self = rget({...}, 1)
-        if checkcall() then
-            for i,v in nxt, args do
-                appendf(filename, "Namecall: " .. tostr(i) .. " " .. tostr(v) .. " " .. tostr(self) .. " " .. tostr(getncm()) .. "\n")
+        local self = Rawget({...}, 1)
+        if Checkcaller() then
+            for i,v in Next, args do
+                Appendfile(filename, "Namecall: " .. Tostring(i) .. " " .. Tostring(v) .. " " .. Tostring(self) .. " " .. Tostring(Getnamecallmethod()) .. "\n")
             end
             return hook(...)
         end
         return hook(...)
     end))
 
-    local hook2;hook2 = hookfunc(mt.__index, newcc(function(...)
+    local hook2;hook2 = Hookfunction(mt.__index, Newcclosure(function(...)
         local args = {select(2, ...)}
-        local self = rget({...}, 1)
-        if checkcall() then
-            for i,v in nxt, args do
-                appendf(filename, "Index: " .. tostr(i) .. " " .. tostr(v) .. " " .. tostr(self) .. "\n")
+        local self = Rawget({...}, 1)
+        if Checkcaller() then
+            for i,v in Next, args do
+                Appendfile(filename, "Index: " .. Tostring(i) .. " " .. Tostring(v) .. " " .. Tostring(self) .. "\n")
             end
             return hook2(...)
         end
         return hook2(...)
     end))
 
-    local hook3;hook3 = hookfunc(mt.__newindex, newcc(function(...)
+    local hook3;hook3 = Hookfunction(mt.__newindex, Newcclosure(function(...)
         local args = {select(2, ...)}
-        local self = rget({...}, 1)
-        if checkcall() then
-            for i,v in nxt, args do
-                appendf(filename, "Newindex: " .. tostr(i) .. " " .. tostr(v) .. " " .. tostr(self) .. "\n")
+        local self = Rawget({...}, 1)
+        if Checkcaller() then
+            for i,v in Next, args do
+                Appendfile(filename, "Newindex: " .. Tostring(i) .. " " .. Tostring(v) .. " " .. Tostring(self) .. "\n")
             end
             return hook3(...)
         end
@@ -112,17 +111,17 @@ end
 local function RobloxFunctions()
     if FindDumpMethod() ~= "robloxfunctions" and FindDumpMethod() ~= "all" then return end
 
-    local rf = getrawmetatable(getrenv_c())
+    local rf = getrawmetatable(getrenv())
     if rf.__index and typeof(rf.__index) == "table" then
-        for i,v in nxt, rf.__index do
+        for i,v in Next, rf.__index do
             if typeof(v) == "table" then
-                for a,b in nxt, v do
+                for a,b in Next, v do
                     if typeof(b) == "function" and not blocklist[b] and not PreventMultiHook(b) then
-                        local orig;orig = hookfunc(b, function(...)
-                            if checkcall() then
+                        local orig;orig = Hookfunction(b, function(...)
+                            if Checkcaller() then
                                 local args = {...}
-                                for _,arg in nxt, args do
-                                    appendf(filename, getinfo(b).name .. ": " .. tostr(arg) .. "\n")
+                                for _,arg in Next, args do
+                                    Appendfile(filename, getinfo(b).name .. ": " .. Tostring(arg) .. "\n")
                                 end
                             end
                             return orig(...)
@@ -130,11 +129,11 @@ local function RobloxFunctions()
                     end
                 end
             elseif typeof(v) == "function" and not blocklist[v] and not PreventMultiHook(v) then
-                local orig;orig = hookfunc(v, function(...)
-                    if checkcall() then
+                local orig;orig = Hookfunction(v, function(...)
+                    if Checkcaller() then
                         local args = {...}
-                        for _,arg in nxt, args do
-                            appendf(filename, getinfo(v).name .. ": " .. tostr(arg) .. "\n")
+                        for _,arg in Next, args do
+                            Appendfile(filename, getinfo(v).name .. ": " .. Tostring(arg) .. "\n")
                         end
                     end
                     return orig(...)
@@ -148,12 +147,12 @@ end
 local function ExecutorFunctions()
     if FindDumpMethod() ~= "execfunctions" and FindDumpMethod() ~= "all" then return end
 
-    for i,v in nxt, getgenv_c() do
+    for i,v in Next, getgenv() do
         if typeof(v) == "function" and not blocklist[v] and not PreventMultiHook(v) then
-            local orig;orig = hookfunc(v, function(...)
+            local orig;orig = Hookfunction(v, function(...)
                 local args = {...}
-                for _,arg in nxt, args do
-                    appendf(filename, getinfo(v).name .. " " .. tostr(arg) .. "\n")
+                for _,arg in Next, args do
+                    Appendfile(filename, getinfo(v).name .. " " .. Tostring(arg) .. "\n")
                 end
                 return orig(...)
             end)
@@ -172,5 +171,9 @@ RobloxFunctions()
 -- todo: edit dump types to be able to dump combonations instead of an individual or just all
 -- todo: getgc dumping? getreg dumping? (threads and signals), opcode hooking? metatable based dumpers?
 -- todo: return names of any robloxfunc/executorfunc that returns a function (maybe upvalues,constants as well)
--- checkcaller, tostring, getinfo
--- make renamed funcs less ugly
+-- todo: edit checkcaller, tostring, getinfo
+-- todo: make renamed funcs less ugly
+-- todo: make script not log anything for atleast 1 second after its executed
+-- todo: add websocket as an alternative to appendfile, localhost should be significantly faster and prevent superbig files being made
+-- todo: sandboxing
+-- todo: optimize code due to shit lagging
